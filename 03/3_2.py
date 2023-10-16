@@ -4,14 +4,22 @@
 #
 # Подсказка: последняя стадия развития - Homo sapiens sapiens.
 
+""" 
 stages = [
-    "Hominoidea",
-    "Hominidae",
-    "Homininae",
-    "Hominini",
-    "Australopithecus ",
-    "Homo erectus",
-    "Homo heidelbergensis",
-    "Homo sapiens sapiens",
-]
-print(*stages, sep=" => ")
+     "Hominoidea",
+     "Hominidae",
+     "Homininae",
+     "Hominini",
+     "Australopithecus ",
+     "Homo erectus",
+     "Homo heidelbergensis",
+     "Homo sapiens sapiens",
+ ]
+ print(*stages, sep=" => ")
+ """
+
+s1 = input('Enter the 1st stage of human development "Homo...": ')
+s2 = input('Enter the 2nd stage of human development "Homo...": ')
+s3 = input('Enter the 3rd stage of human development "Homo...": ')
+
+print(s1, s2, s3, sep=" => ")
