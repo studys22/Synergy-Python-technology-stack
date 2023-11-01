@@ -9,12 +9,10 @@ def get_pet(ID):
 
 def get_suffix(age):
     return (
-        "год"
-        if (age % 10 == 1)
+        "лет"
+        if (age % 100) in {11, 12, 13, 14}
         else (
-            "лет"
-            if (age % 100) in {12, 13, 14}
-            else ("года" if (age % 10) in {2, 3, 4} else "лет")
+            "год" if (age % 10 == 1) else ("года" if (age % 10) in {2, 3, 4} else "лет")
         )
     )
 
