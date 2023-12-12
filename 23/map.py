@@ -3,6 +3,7 @@ import pygame
 import settings
 from helicopter import Helicopter
 from tilemap import Tilemap
+import json
 
 GROUND_ID = 1
 RIVER_ID = 2
@@ -10,6 +11,8 @@ TREE_ID = 3
 FIRE_ID = 4
 STORE_ID = 5
 HOSPITAL_ID = 6
+CLOUD_ID = 7
+LIGHTING_ID = 8
 
 TILE_TREE_ID = 94
 TILE_FIRE_ID = 80
@@ -17,6 +20,8 @@ TILE_HELICO_ID = 101
 TILE_HELICO_SHADOW_ID = 197
 TILE_STORE_ID = 66
 TILE_HOSPITAL_ID = 81
+TILE_CLOUD_ID = 26
+TILE_LIGHTING_ID = 62
 
 ground = "⬛🟫🟩🌲🟦🔥⛅🌪️🚁💗⭐"
 
@@ -33,11 +38,14 @@ class Map:
         self.ground = [
             [GROUND_ID for j in range(self.width + 2)] for i in range(self.height + 2)
         ]
-        self.ground_tilemap = Tilemap(ts, True)
-        self.onground_tilemap = Tilemap(ts)
+        self.ground_tilemap = Tilemap(ts, True, size)
+        self.onground_tilemap = Tilemap(ts, size=size)
         self.start_of_fire = {}
         self.helico = Helicopter(size)
-        self.helico_tilemap = Tilemap(ts)
+        self.helico_tilemap = Tilemap(ts, size=size)
+        self.sky = [[-1 for j in range(self.width + 2)] for i in range(self.height + 2)]
+        self.sky_tilemap = Tilemap(ts, size=size)
+        self.sky_ends = {}
 
     def in_map(self, x: int, y: int) -> bool:
         return 0 < x and x <= self.height and 0 < y and y <= self.width
@@ -75,7 +83,7 @@ class Map:
                 if self.in_map(x, y):
                     self.ground[x][y] = RIVER_ID
 
-    def generate_river_old(self, length: int) -> None:
+    def generate_river_old(self, length: int) -> None: # do not use
         start_found = False
         x, y = 0, 0
         cur_br = (0, 1)
@@ -176,6 +184,24 @@ class Map:
                 point_found = True
         self.ground[y][x] = HOSPITAL_ID
 
+    def processing_clouds(self) -> None:
+        cur_time = pygame.time.get_ticks()
+        for i in range(1, self.height + 1):
+            for j in range(1, self.width + 1):
+                if self.sky[i][j] == -1:
+                    if utils.start_cloud():
+                        duration = utils.duration_of_cloud()
+                        self.sky_ends[(i, j)] = cur_time + duration
+                        self.sky[i][j] = CLOUD_ID
+                    elif utils.start_lighting():
+                        duration = utils.duration_of_cloud()
+                        self.sky_ends[(i, j)] = cur_time + duration
+                        self.sky[i][j] = LIGHTING_ID
+                else:
+                    if self.sky_ends[(i, j)] <= cur_time:
+                        self.sky[i][j] = -1
+                        self.sky_ends.pop((i, j))
+
     def processing_fire(self) -> None:
         cur_time = pygame.time.get_ticks()
         for i in range(1, self.height + 1):
@@ -229,20 +255,28 @@ class Map:
                     self.onground_tilemap.map[i][j] = -1
 
         self.helico_tilemap.set_zero()
-        self.helico_tilemap.map[self.helico.position[0] - 1][
-            self.helico.position[1]
-        ] = TILE_HELICO_ID
-        self.helico_tilemap.map[self.helico.position[0]][
-            self.helico.position[1]
-        ] = TILE_HELICO_SHADOW_ID
+        h_i, h_j = self.helico.position[0], self.helico.position[1]
+        self.helico_tilemap.map[h_i - 1][h_j] = TILE_HELICO_ID
+        if self.sky[h_i][h_j] == -1:
+            self.helico_tilemap.map[h_i][h_j] = TILE_HELICO_SHADOW_ID
+
+        self.sky_tilemap.set_zero()
+        for i in range(1, self.height + 1):
+            for j in range(1, self.width + 1):
+                if self.sky[i][j] == CLOUD_ID:
+                    self.sky_tilemap.map[i - 1][j] = TILE_CLOUD_ID
+                elif self.sky[i][j] == LIGHTING_ID:
+                    self.sky_tilemap.map[i - 1][j] = TILE_LIGHTING_ID
 
     def draw(self, window) -> None:
         self.ground_tilemap.render()
-        window.blit(self.ground_tilemap.image, (0, settings.TEXT_HEIGHT))
+        window.blit(self.ground_tilemap.image, (0, 0))
         self.onground_tilemap.render()
-        window.blit(self.onground_tilemap.image, (0, settings.TEXT_HEIGHT))
+        window.blit(self.onground_tilemap.image, (0, 0))
         self.helico_tilemap.render()
-        window.blit(self.helico_tilemap.image, (0, settings.TEXT_HEIGHT))
+        window.blit(self.helico_tilemap.image, (0, 0))
+        self.sky_tilemap.render()
+        window.blit(self.sky_tilemap.image, (0, 0))
 
     def processing_helico(self, points) -> int:
         y, x = self.helico.position[0], self.helico.position[1]
@@ -253,9 +287,15 @@ class Map:
         elif self.ground[y][x] == RIVER_ID:
             self.helico.water = self.helico.water_capacity
         elif self.ground[y][x] == STORE_ID and points >= settings.UPGRADE_TANK_COST:
-            self.helico.water_capacity += 1
-            points -= settings.UPGRADE_TANK_COST
+            counts_of_upgrades = points // settings.UPGRADE_TANK_COST
+            self.helico.water_capacity += counts_of_upgrades
+            points -= counts_of_upgrades * settings.UPGRADE_TANK_COST
         elif self.ground[y][x] == HOSPITAL_ID and points >= settings.ADD_LIVES_COST:
-            self.helico.lives += settings.COUNT_ADDED_LIVES
-            points -= settings.ADD_LIVES_COST
+            counts_of_upgrades = points // settings.ADD_LIVES_COST
+            self.helico.lives += counts_of_upgrades * settings.COUNT_ADDED_LIVES
+            points -= counts_of_upgrades * settings.ADD_LIVES_COST
+
+        if self.sky[y][x] == LIGHTING_ID:
+            self.helico.lives -= settings.LIVES_DECREMENT_ON_LIGHTING
+
         return points

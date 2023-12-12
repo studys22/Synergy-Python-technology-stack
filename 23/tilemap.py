@@ -54,7 +54,7 @@ class Tilemap:
         self.map = list(
             list(-1 for j in range(self.size[0] + 2)) for i in range(self.size[1] + 2)
         )
-        #self.render()
+        # self.render()
 
     def set_random(self):
         n = len(self.tileset.tiles)

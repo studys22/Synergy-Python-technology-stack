@@ -21,10 +21,13 @@ class Helicopter:
         )
 
     def go(self) -> None:
-        new_position = (self.position[0] + self.speed_y, self.position[1] + self.speed_x)
+        new_position = (
+            self.position[0] + self.speed_y,
+            self.position[1] + self.speed_x,
+        )
         if self.in_map(new_position):
             self.position = new_position
-            
+
     def start_go(self, direction: str) -> None:
         if direction == "Left":
             self.speed_x = -1
@@ -44,7 +47,3 @@ class Helicopter:
             self.speed_y = 0
         elif direction == "Down":
             self.speed_y = 0
-
-    #def processing(self, map) -> None:
-        
-
