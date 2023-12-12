@@ -23,8 +23,6 @@ TILE_HOSPITAL_ID = 81
 TILE_CLOUD_ID = 26
 TILE_LIGHTING_ID = 62
 
-ground = "⬛🟫🟩🌲🟦🔥⛅🌪️🚁💗⭐"
-
 possible_moves = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
 neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
@@ -202,8 +200,9 @@ class Map:
                         self.sky[i][j] = -1
                         self.sky_ends.pop((i, j))
 
-    def processing_fire(self) -> None:
+    def processing_fire(self, points) -> int:
         cur_time = pygame.time.get_ticks()
+        d_points = 0
         for i in range(1, self.height + 1):
             for j in range(1, self.width + 1):
                 if self.ground[i][j] == TREE_ID and utils.start_fire():
@@ -216,6 +215,8 @@ class Map:
                 ):
                     self.ground[i][j] = GROUND_ID
                     self.start_of_fire.pop((i, j))
+                    d_points += settings.POINTS_FOR_BURNED_TREE
+        return max(0, points + d_points)
 
     def update_tilemaps(self) -> None:
         cells = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]

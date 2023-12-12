@@ -141,7 +141,7 @@ class Game(object):
     def runLogic(self) -> bool:
         self.map.helico.go()
         self.points = self.map.processing_helico(self.points)
-        self.map.processing_fire()
+        self.points = self.map.processing_fire(self.points)
         self.map.processing_clouds()
         if self.map.helico.lives <= 0:
             self.text = "Game over!!! Points: {points}".format(points=self.points)
